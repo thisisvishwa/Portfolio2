@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE LAYER (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: pms_postgres_container
+    restart: always
+    environment:
+      POSTGRES_USER: pms_admin
+      POSTGRES_PASSWORD: SecureAdminPassword123
+      POSTGRES_DB: pms_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pms_admin -d pms_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. CACHE LAYER (Redis)
+  cache:
+    image: redis:7-alpine
+    container_name: pms_redis_container
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. BACKEND API MICROSERVICE
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pms_backend_container
+    restart: always
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://pms_admin:SecureAdminPassword123@db:5432/pms_database?schema=public
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+      - CORS_ORIGIN=http://localhost:3000
+      - JWT_ACCESS_SECRET=enterprise_super_secret_access_token_key_hash_512_bits
+      - JWT_REFRESH_SECRET=enterprise_super_secret_refresh_token_key_hash_512_bits
+      - JWT_ACCESS_EXPIRY=15m
+      - JWT_REFRESH_EXPIRY=7d
+      - COOKIE_SIGNING_SECRET=cookie_secret_signing_key_256_bits
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  # 4. FRONTEND NEXT.JS WEB CLIENT
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pms_frontend_container
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
