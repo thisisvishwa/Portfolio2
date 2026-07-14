@@ -390,7 +390,7 @@ export const deleteFilesBulk = async (
     }
 
     // Unlink physical assets from server disk
-    files.forEach((file) => {
+    files.forEach((file: any) => {
       const filePath = path.join(uploadDir, file.filename);
       if (fs.existsSync(filePath)) {
         try {

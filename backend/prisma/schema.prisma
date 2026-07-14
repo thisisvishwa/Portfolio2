@@ -1,0 +1,578 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 1. AUTHENTICATION & SECURITY MODULES
+// ==========================================
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  WRITER
+  VIEWER
+}
+
+enum ActionStatus {
+  SUCCESS
+  FAILED
+  BLOCKED
+}
+
+model User {
+  id                    String         @id @default(uuid())
+  email                 String         @unique
+  username              String         @unique
+  passwordHash          String
+  role                  Role           @default(WRITER)
+  displayName           String
+  slug                  String         @unique
+  headline              String?
+  shortBio              String?
+  longBio               String?
+  avatarUrl             String?
+  bannerUrl             String?
+  location              String?
+  availability          String?        // e.g., "Full-time", "Freelance", "Not Available"
+  timezone              String         @default("UTC")
+  languages             String[]       // Array of languages spoken
+  resumeUrl             String?
+  cvUrl                 String?
+  profileVisibility     Boolean        @default(true)
+  openToWork            Boolean        @default(false)
+  hireMeStatus          Boolean        @default(false)
+  freelanceStatus       Boolean        @default(false)
+  
+  // Security Fields
+  twoFactorEnabled      Boolean        @default(false)
+  twoFactorSecret       String?
+  twoFactorRecoveryCodes String[]      // Hashed recovery codes
+  emailVerified         Boolean        @default(false)
+  verificationToken     String?
+  resetToken            String?
+  resetTokenExpires     DateTime?
+  loginAttempts         Int            @default(0)
+  lockoutExpires        DateTime?
+  lastLoginAt           DateTime?
+  
+  // Timestamps & Tracking
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  deletedAt             DateTime?      // Soft delete support
+
+  // Relations
+  sessions              Session[]
+  auditLogs             AuditLog[]
+  blogs                 Blog[]
+  projects              Project[]
+  comments              Comment[]
+  activityLogs          ActivityLog[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique // Hashed token string
+  refreshToken String   @unique // Hashed refresh token
+  ipAddress    String?
+  userAgent    String?
+  deviceType   String?  // Desktop, Mobile, Tablet, Bot
+  location     String?  // Geolocation lookup results
+  isRevoked    Boolean  @default(false)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model AuditLog {
+  id        String       @id @default(uuid())
+  userId    String?
+  action    String       // e.g., "USER_LOGIN", "UPDATE_SETTINGS", "DELETE_BLOG"
+  details   String       // JSON payload string
+  ipAddress String
+  userAgent String
+  status    ActionStatus @default(SUCCESS)
+  createdAt DateTime     @default(now())
+
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+}
+
+// ==========================================
+// 2. PORTFOLIO & WORK SHOWCASE MODULES
+// ==========================================
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+model Project {
+  id               String            @id @default(uuid())
+  title            String
+  slug             String            @unique
+  category         String
+  tags             String[]
+  status           PublicationStatus @default(DRAFT)
+  featured         Boolean           @default(false)
+  thumbnailUrl     String
+  galleryUrls      String[]          // Array of supporting screenshot/render URLs
+  videoUrl         String?
+  liveUrl          String?
+  githubUrl        String?
+  docsUrl          String?
+  techStack        String[]          // e.g., ["Next.js", "Prisma", "Tailwind"]
+  
+  // Case Study Sections
+  problem          String?           @db.Text
+  solution         String?           @db.Text
+  architecture     String?           @db.Text
+  features         String?           @db.Text
+  challenges       String?           @db.Text
+  lessonsLearned   String?           @db.Text
+  
+  // Metrics & Stats
+  views            Int               @default(0)
+  likes            Int               @default(0)
+  bookmarks        Int               @default(0)
+  displayOrder     Int               @default(0)
+  
+  // SEO Metadata
+  seoTitle         String?
+  seoDescription   String?
+  seoOgImage       String?
+  seoSchemaMarkup  String?           // JSON schema payload
+
+  authorId         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  author           User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+  @@index([category])
+}
+
+model Service {
+  id             String    @id @default(uuid())
+  name           String
+  slug           String    @unique
+  icon           String    // Icon component name string (lucide icon name)
+  description    String    @db.Text
+  startingPrice  Decimal   @db.Decimal(10, 2)
+  features       String[]  // Bullet features provided
+  timeline       String?   // e.g., "2-4 Weeks"
+  deliverables   String[]  // Array of deliverables
+  faq            String?   // JSON object representing question & answers
+  portfolioLink  String?
+  ctaText        String    @default("Book a Call")
+  visibility     Boolean   @default(true)
+  displayOrder   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Skill {
+  id                String    @id @default(uuid())
+  name              String    @unique
+  category          String    // e.g., "Frontend", "Backend", "DevOps", "AI"
+  level             Int       @default(0) // Percentage scale (e.g. 0-100)
+  yearsExperience   Float     @default(0)
+  icon              String?   // SVG path or React Icon key
+  color             String?   // Hex color or CSS class
+  featured          Boolean   @default(false)
+  displayOrder      Int       @default(0)
+  certificationLink String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model WorkExperience {
+  id              String    @id @default(uuid())
+  company         String
+  companyLogo     String?
+  role            String
+  employmentType  String    // e.g., "Full-time", "Contract", "Part-time"
+  location        String?
+  startDate       DateTime
+  endDate         DateTime? // null if currently working
+  currentlyWorking Boolean   @default(false)
+  responsibilities String[]
+  achievements     String[]
+  technologiesUsed String[]
+  displayOrder    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Education {
+  id           String    @id @default(uuid())
+  institution  String
+  logoUrl      String?
+  degree       String
+  field        String
+  startDate    DateTime
+  endDate      DateTime?
+  description  String?   @db.Text
+  achievements String[]
+  certificates String[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Certification {
+  id             String    @id @default(uuid())
+  name           String
+  issuer         String
+  credentialId   String?
+  issueDate      DateTime
+  expiryDate     DateTime?
+  certificateUrl String?
+  imageUrl       String?
+  verificationUrl String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// ==========================================
+// 3. BLOG CONTENT MANAGEMENT SYSTEM (CMS)
+// ==========================================
+
+model Blog {
+  id               String            @id @default(uuid())
+  title            String
+  slug             String            @unique
+  content          String            @db.Text // Rich text or raw Markdown
+  htmlContent      String            @db.Text // Sanitized rendered HTML
+  status           PublicationStatus @default(DRAFT)
+  scheduledAt      DateTime?         // Automatic publish hook
+  featuredImage    String
+  readingTime      Int               @default(1)
+  categories       String[]
+  tags             String[]
+  
+  // Engagement
+  views            Int               @default(0)
+  likes            Int               @default(0)
+  bookmarks        Int               @default(0)
+  shareCount       Int               @default(0)
+  
+  // SEO Metadata
+  seoTitle         String?
+  seoDescription   String?
+  seoOgImage       String?
+  seoCanonicalUrl  String?
+  seoTwitterCard   String?           @default("summary_large_image")
+  seoSchemaMarkup  String?           @db.Text
+
+  authorId         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  author           User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments         Comment[]
+
+  @@index([slug])
+  @@index([status])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  blogId    String
+  userId    String?  // Optional, if user is logged in
+  guestName String?  // For anonymous comments
+  guestEmail String? // Anonymous email
+  content   String   @db.Text
+  approved  Boolean  @default(false) // Mod verification
+  isSpam    Boolean  @default(false)
+  parentId  String?  // Self-referential for threaded comments
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent    Comment? @relation("ThreadComments", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("ThreadComments")
+
+  @@index([blogId])
+  @@index([parentId])
+}
+
+// ==========================================
+// 4. CUSTOMER ENGAGEMENT & MARKETING
+// ==========================================
+
+enum MessageStatus {
+  UNREAD
+  READ
+  ARCHIVED
+  REPLIED
+}
+
+model ContactRequest {
+  id        String        @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String        @db.Text
+  status    MessageStatus @default(UNREAD)
+  spamScore Float         @default(0.0)
+  ipAddress String
+  userAgent String
+  labels    String[]      // Custom flags like ["Urgent", "Freelance Job"]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum SubscriptionStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  PENDING
+}
+
+model NewsletterSubscriber {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  status             SubscriptionStatus @default(PENDING)
+  doubleOptInToken   String?            @unique
+  optInTokenExpires  DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+// ==========================================
+// 5. EXTENSIBLE PAGE & COMPONENT BUILDERS
+// ==========================================
+
+model DynamicPage {
+  id             String            @id @default(uuid())
+  title          String
+  slug           String            @unique // e.g., "privacy-policy" or custom landing
+  layout         String            @db.Text // JSON configuration string for sections
+  status         PublicationStatus @default(DRAFT)
+  
+  // SEO Metadata
+  seoTitle       String?
+  seoDescription String?
+  seoOgImage     String?
+  seoSchema      String?           @db.Text
+  
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model Form {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  description  String?
+  fields       String           @db.Text // JSON string representing schema input definitions
+  validations  String?          @db.Text // JSON string representing validation constraints
+  webhookUrl   String?
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  submissions  FormSubmission[]
+}
+
+model FormSubmission {
+  id         String   @id @default(uuid())
+  formId     String
+  data       String   @db.Text // JSON string of submitted form response
+  ipAddress  String
+  createdAt  DateTime @default(now())
+
+  form       Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+}
+
+// ==========================================
+// 6. THEMES & CUSTOMIZATIONS
+// ==========================================
+
+model Theme {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  primaryColor String   // hex code
+  secondaryColor String // hex code
+  accentColor  String   // hex code
+  fontFamily   String   @default("Inter")
+  borderRadius String   @default("0.5rem")
+  boxShadow    String?
+  cursorStyle  String   @default("default") // default, dynamic-circle, none
+  layoutWidth  String   @default("container-max")
+  navbarStyle  String   @default("glassmorphic")
+  footerStyle  String   @default("standard")
+  loaderType   String   @default("skeleton")
+  isDark       Boolean  @default(true)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Menu {
+  id           String   @id @default(uuid())
+  label        String
+  url          String
+  icon         String?  // lucide icon keyword
+  displayOrder Int      @default(0)
+  target       String   @default("_self") // _blank, _self
+  rolesAllowed Role[]   @default([])      // Roles allowed to see (empty = guest/public)
+  parentId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  parent       Menu?    @relation("SubMenus", fields: [parentId], references: [id], onDelete: Cascade)
+  subMenus     Menu[]   @relation("SubMenus")
+
+  @@index([parentId])
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g. "BRAND_NAME", "SMTP_HOST", "MAINTENANCE_MODE"
+  value     String   @db.Text
+  group     String   @default("GENERAL") // e.g. GENERAL, SMTP, INTEGRATIONS, SEO
+  updatedAt DateTime @updatedAt
+}
+
+model Testimonial {
+  id           String   @id @default(uuid())
+  clientName   String
+  clientPhoto  String?
+  company      String?
+  role         String?
+  rating       Int      @default(5)
+  feedback     String   @db.Text
+  videoUrl     String?
+  featured     Boolean  @default(false)
+  visibility   Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model OpenSourceRepo {
+  id               String   @id @default(uuid())
+  repoName         String   @unique // e.g., "owner/repo"
+  description      String?
+  stars            Int      @default(0)
+  forks            Int      @default(0)
+  language         String?
+  contributionGraph String? @db.Text // cache SVG or JSON of contributions
+  latestCommits    String?  @db.Text // JSON of recent commits
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  ipAddress String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ==========================================
+// 8. ADDITIONAL METRICS & SHOWCASE TABLES
+// ==========================================
+
+model Award {
+  id          String   @id @default(uuid())
+  title       String
+  issuer      String
+  date        DateTime
+  description String?  @db.Text
+  icon        String?  // lucide icon name
+  displayOrder Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AnalyticsLog {
+  id           String   @id @default(uuid())
+  ipAddress    String
+  pageUrl      String   // e.g. "/blog/slug-1" or "/"
+  referrer     String?  // search source or domain
+  userAgent    String
+  deviceType   String   // Mobile, Desktop, Tablet, Bot
+  browser      String   // Chrome, Firefox, Safari
+  country      String   @default("Unknown")
+  city         String   @default("Unknown")
+  duration     Int      @default(0) // time spent in seconds
+  createdAt    DateTime @default(now())
+
+  @@index([pageUrl])
+  @@index([createdAt])
+}
+
+// ==========================================
+// 9. FOOTER BUILDER SCHEMAS
+// ==========================================
+
+model FooterSection {
+  id           String   @id @default(uuid())
+  title        String   // e.g. "Quick Links", "Contact Info"
+  type         String   // e.g. "links", "text", "newsletter"
+  links        String   // JSON array string of [{ label: "Home", url: "/" }]
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ==========================================
+// 10. MEDIA LIBRARY ASSETS TABLES
+// ==========================================
+
+model MediaFolder {
+  id        String      @id @default(uuid())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  files     MediaFile[]
+}
+
+model MediaFile {
+  id           String       @id @default(uuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int          // Size in bytes
+  url          String
+  altText      String?
+  folderId     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  folder       MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([folderId])
+}
