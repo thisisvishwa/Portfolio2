@@ -10,7 +10,9 @@
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "vercel-build": "prisma generate && tsc",
+    "postinstall": "prisma generate"
   },
   "keywords": [
     "nextjs",

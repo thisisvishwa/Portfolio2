@@ -10,10 +10,18 @@ import fs from 'fs';
 // MULTER FILE INGESTION GATEWAY
 // ==========================================
 
-const uploadDir = path.join(__dirname, '../../uploads');
+// Auto-detect serverless environment (Vercel provides /tmp as the only writable scratchpath)
+const uploadDir = process.env.VERCEL
+  ? '/tmp/uploads'
+  : path.join(__dirname, '../../uploads');
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Wrap directory creation in a try-catch to ensure serverless boots smoothly regardless of FS limits
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (err: any) {
+  logger.warn(`Media uploads folder bypassed or restricted: ${err.message}`);
 }
 
 const storage = multer.diskStorage({
@@ -86,20 +94,20 @@ export const uploadFile = async (
 
     const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     if (req.file.size > MAX_SIZE) {
-      fs.unlinkSync(filePath);
+      try { fs.unlinkSync(filePath); } catch {}
       return next(new AppError('File size exceeds the maximum limit of 5MB.', 400));
     }
 
     const isSignatureValid = validateMagicBytes(filePath, fileMime);
     if (!isSignatureValid) {
-      fs.unlinkSync(filePath);
+      try { fs.unlinkSync(filePath); } catch {}
       return next(new AppError('Security check failed: File header signature mismatch.', 400));
     }
 
     if (folderId) {
       const folderExists = await prisma.mediaFolder.findUnique({ where: { id: folderId } });
       if (!folderExists) {
-        fs.unlinkSync(filePath);
+        try { fs.unlinkSync(filePath); } catch {}
         return next(new AppError('The specified target folder does not exist.', 400));
       }
     }
@@ -147,7 +155,7 @@ export const uploadFilesBulk = async (
     if (folderId) {
       const folderExists = await prisma.mediaFolder.findUnique({ where: { id: folderId } });
       if (!folderExists) {
-        files.forEach((f) => fs.unlinkSync(f.path));
+        files.forEach((f) => { try { fs.unlinkSync(f.path); } catch {} });
         return next(new AppError('Target folder does not exist.', 400));
       }
     }
@@ -156,17 +164,15 @@ export const uploadFilesBulk = async (
     const savedFiles: any[] = [];
 
     for (const file of files) {
-      // Validate individual size
       if (file.size > MAX_SIZE) {
-        fs.unlinkSync(file.path);
-        continue; // Skip oversize
+        try { fs.unlinkSync(file.path); } catch {}
+        continue;
       }
 
-      // Validate byte signature
       const isSignatureValid = validateMagicBytes(file.path, file.mimetype);
       if (!isSignatureValid) {
-        fs.unlinkSync(file.path);
-        continue; // Skip fake signatures
+        try { fs.unlinkSync(file.path); } catch {}
+        continue;
       }
 
       const relativeUrl = `/uploads/${file.filename}`;
@@ -351,7 +357,7 @@ export const deleteFile = async (
 
     const filePath = path.join(uploadDir, file.filename);
     if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      try { fs.unlinkSync(filePath); } catch {}
     }
 
     await prisma.mediaFile.delete({ where: { id } });
@@ -401,7 +407,6 @@ export const deleteFilesBulk = async (
       }
     });
 
-    // Bulk erase database references inside one command
     await prisma.mediaFile.deleteMany({
       where: { id: { in: fileIds } },
     });
