@@ -94,6 +94,7 @@ import formRoutes from './routes/formRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import newsletterRoutes from './routes/newsletterRoutes';
+import swaggerRoutes from './routes/swaggerRoutes';
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
