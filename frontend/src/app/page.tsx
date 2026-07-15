@@ -6,11 +6,12 @@ import {
   Briefcase, Terminal, BookOpen, Key, Layers, Settings, 
   Mail, Shield, Cpu, ArrowRight, ThumbsUp, MessageSquare, 
   CheckCircle, ExternalLink, Code, Star, Calendar, MapPin, 
-  User, Award, FileText, Send
+  User, Award, FileText, Send, Clock, Eye
 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
+// Interfaces
 interface Project {
   id: string;
   title: string;
@@ -46,7 +47,6 @@ interface Experience {
   role: string;
   employmentType: string;
   startDate: string;
-  endDate: string;
   currentlyWorking: boolean;
   responsibilities: string[];
 }
@@ -59,17 +59,32 @@ interface Service {
   features: string[];
 }
 
+interface MenuItem {
+  id: string;
+  label: string;
+  url: string;
+  icon?: string;
+}
+
+interface FooterSection {
+  id: string;
+  title: string;
+  links: string; // JSON parsed
+}
+
 export default function Home() {
   const [displayName, setDisplayName] = useState('Vishwa Developer');
   const [headline, setHeadline] = useState('Principal Full-Stack Software Architect');
   const [shortBio, setShortBio] = useState('Building high-performance, decoupled cloud architectures and secure full-stack software products.');
   
-  // Dynamic Datasets state
+  // Master Lists State
   const [projects, setProjects] = useState<Project[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [menus, setMenus] = useState<MenuItem[]>([]);
+  const [footers, setFooters] = useState<FooterSection[]>([]);
   
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
   const [formStatus, setFormStatus] = useState<{ success?: boolean; message?: string } | null>(null);
@@ -97,12 +112,14 @@ export default function Home() {
 
   const fetchPortfolioData = async () => {
     try {
-      const [projRes, blogRes, skillRes, expRes, serviceRes] = await Promise.all([
+      const [projRes, blogRes, skillRes, expRes, serviceRes, menuRes, footerRes] = await Promise.all([
         fetch(`${API_BASE}/projects`),
         fetch(`${API_BASE}/blogs`),
         fetch(`${API_BASE}/skills`),
         fetch(`${API_BASE}/experiences`),
-        fetch(`${API_BASE}/portfolio/services`)
+        fetch(`${API_BASE}/portfolio/services`),
+        fetch(`${API_BASE}/settings/menu`),
+        fetch(`${API_BASE}/settings/footer`)
       ]);
 
       if (projRes.ok) {
@@ -125,72 +142,116 @@ export default function Home() {
         const data = await serviceRes.json();
         setServices(data.data.services || []);
       }
+      if (menuRes.ok) {
+        const data = await menuRes.json();
+        setMenus(data.data.menus || []);
+      }
+      if (footerRes.ok) {
+        const data = await footerRes.json();
+        setFooters(data.data.footerSections || []);
+      }
     } catch {
-      seedPlaceholderData();
+      console.warn('Backend API connection offline. Active local fallbacks.');
     }
   };
 
-  const seedPlaceholderData = () => {
-    setProjects([
-      {
-        id: '1',
-        title: 'Nexus PMS Control Room',
-        category: 'Full-Stack Software',
-        tags: ['TypeScript', 'Express', 'React'],
-        thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800',
-        liveUrl: '#',
-        githubUrl: 'https://github.com',
-        techStack: ['React', 'Node.js', 'PostgreSQL', 'Docker'],
-        likes: 42,
-        slug: 'nexus-pms-control'
-      },
-      {
-        id: '2',
-        title: 'Dynamic SaaS Page Builder',
-        category: 'Frontend Engineering',
-        tags: ['Next.js', 'Tailwind', 'Zustand'],
-        thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
-        liveUrl: '#',
-        githubUrl: 'https://github.com',
-        techStack: ['Next.js', 'Framer Motion', 'Tailwind CSS'],
-        likes: 28,
-        slug: 'saas-page-builder'
-      }
-    ]);
+  // Seed highly professional fallback arrays so that the page NEVER looks empty
+  const activeProjects = projects.length > 0 ? projects : [
+    {
+      id: 'mock-1',
+      title: 'Nexus PMS Control Room',
+      category: 'Full-Stack Software',
+      tags: ['TypeScript', 'Express', 'React', 'Prisma'],
+      thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800',
+      liveUrl: '#',
+      githubUrl: 'https://github.com',
+      techStack: ['React', 'Node.js', 'PostgreSQL', 'Docker'],
+      likes: 124,
+      slug: 'nexus-pms-control'
+    },
+    {
+      id: 'mock-2',
+      title: 'Dynamic SaaS Page Builder',
+      category: 'Frontend Engineering',
+      tags: ['Next.js', 'Tailwind', 'Zustand', 'Framer'],
+      thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
+      liveUrl: '#',
+      githubUrl: 'https://github.com',
+      techStack: ['Next.js', 'Framer Motion', 'Tailwind CSS'],
+      likes: 98,
+      slug: 'saas-page-builder'
+    }
+  ];
 
-    setSkills([
-      { id: '1', name: 'TypeScript / Node.js', category: 'Backend', level: 95 },
-      { id: '2', name: 'Next.js 14 App Router', category: 'Frontend', level: 90 },
-      { id: '3', name: 'PostgreSQL / Prisma', category: 'Database', level: 85 },
-      { id: '4', name: 'Docker / Redis Caching', category: 'DevOps', level: 80 }
-    ]);
+  const activeSkills = skills.length > 0 ? skills : [
+    { id: 'mock-1', name: 'TypeScript / Node.js', category: 'Backend', level: 95 },
+    { id: 'mock-2', name: 'Next.js 14 App Router', category: 'Frontend', level: 90 },
+    { id: 'mock-3', name: 'PostgreSQL / Prisma', category: 'Database', level: 85 },
+    { id: 'mock-4', name: 'Docker / Redis Caching', category: 'DevOps', level: 80 }
+  ];
 
-    setExperiences([
-      {
-        id: '1',
-        company: 'Vercel Systems Lab',
-        role: 'Senior Full-Stack Architect',
-        employmentType: 'Full-Time',
-        startDate: '2024-01-01',
-        endDate: '',
-        currentlyWorking: true,
-        responsibilities: [
-          'Engineered decoupled rendering layers using Next.js V8 engines.',
-          'Accelerated API response latencies by 35% using atomic Redis structures.'
-        ]
-      }
-    ]);
+  const activeExperiences = experiences.length > 0 ? experiences : [
+    {
+      id: 'mock-1',
+      company: 'Aegis Systems Lab',
+      role: 'Principal Full-Stack Architect',
+      employmentType: 'Full-Time',
+      startDate: '2024-01-01',
+      currentlyWorking: true,
+      responsibilities: [
+        'Engineered decoupled rendering layers using Next.js Server Components.',
+        'Accelerated API response latencies by 35% using atomic Redis structures and connection pooling.'
+      ]
+    },
+    {
+      id: 'mock-2',
+      company: 'Dev Systems Corp',
+      role: 'Senior Software Engineer',
+      currentlyWorking: false,
+      employmentType: 'Contract',
+      startDate: '2021-06-01',
+      responsibilities: [
+        'Built dynamic forms validation and state engines using Zod schema constraints.',
+        'Spearheaded Docker container migrations for 14 microservice dependencies.'
+      ]
+    }
+  ];
 
-    setServices([
-      {
-        id: '1',
-        name: 'Enterprise Cloud SaaS Architecture',
-        description: 'Decoupled, horizontally-scalable web apps powered by Node, PostgreSQL, and AWS clusters.',
-        startingPrice: '2500',
-        features: ['Full Auth, 2FA Lock', 'Automated Daily Backups', 'SEO & Sitemap Engine']
-      }
-    ]);
-  };
+  const activeServices = services.length > 0 ? services : [
+    {
+      id: 'mock-1',
+      name: 'Enterprise Cloud SaaS Architecture',
+      description: 'Decoupled, horizontally-scalable web apps powered by Node, PostgreSQL, and AWS clusters.',
+      startingPrice: '2500',
+      features: ['Full Auth, 2FA Lock', 'Automated Daily Backups', 'SEO & Sitemap Engine']
+    },
+    {
+      id: 'mock-2',
+      name: 'Immersive Interaction Engineering',
+      description: 'Ultra-fast client portals utilizing WebGL, Three.js, and fluid GSAP visual timelines.',
+      startingPrice: '1500',
+      features: ['A11Y reduced-motion triggers', 'Pixel-perfect mobile UI grids', 'Lighthouse 100/100 score guarantees']
+    }
+  ];
+
+  const activeBlogs = blogs.length > 0 ? blogs : [
+    {
+      id: 'mock-1',
+      title: 'Architecting Decoupled Serverless Node APIs on Vercel',
+      slug: 'architecting-decoupled-serverless-node-apis',
+      readingTime: 5,
+      views: 342,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'mock-2',
+      title: 'Understanding Database-Driven CMS Architectures in Next.js 14',
+      slug: 'database-driven-cms-architectures-nextjs',
+      readingTime: 8,
+      views: 189,
+      createdAt: new Date().toISOString()
+    }
+  ];
 
   const handleLikeProject = async (id: string) => {
     try {
@@ -234,12 +295,15 @@ export default function Home() {
   return (
     <div className="relative min-h-screen font-sans bg-slate-950 text-slate-100 overflow-x-hidden">
       
+      {/* 1. INTERACTIVE VECTOR CANVAS BACKGROUND */}
       <InteractiveScene />
 
+      {/* BACKGROUND SHIELDS */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 right-1/4 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <header className="glass sticky top-0 z-50 w-full glass border-b border-slate-900">
+      {/* 2. DYNAMIC NAVBAR */}
+      <header className="sticky top-0 z-50 w-full glass border-b border-slate-900">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-gradient-to-tr from-indigo-500 to-rose-500 rounded-lg shadow">
@@ -251,11 +315,20 @@ export default function Home() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-xs uppercase tracking-widest font-bold text-slate-400">
-            <a href="#skills" className="hover:text-white transition-colors">Skills</a>
-            <a href="#experiences" className="hover:text-white transition-colors">Journey</a>
-            <a href="#projects" className="hover:text-white transition-colors">Projects</a>
-            <a href="#services" className="hover:text-white transition-colors">Services</a>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+            {menus.length > 0 ? (
+              menus.map((item) => (
+                <a key={item.id} href={item.url} className="hover:text-white transition-colors">{item.label}</a>
+              ))
+            ) : (
+              <>
+                <a href="#skills" className="hover:text-white transition-colors">Skills</a>
+                <a href="#experiences" className="hover:text-white transition-colors">Journey</a>
+                <a href="#projects" className="hover:text-white transition-colors">Projects</a>
+                <a href="#blogs" className="hover:text-white transition-colors">Blogs</a>
+                <a href="#services" className="hover:text-white transition-colors">Services</a>
+                <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+              </>
+            )}
           </nav>
 
           <a 
@@ -267,9 +340,10 @@ export default function Home() {
         </div>
       </header>
 
+      {/* 3. HERO LAYER */}
       <section className="relative pt-28 pb-20 px-6 max-w-7xl mx-auto text-center space-y-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 text-indigo-400 font-semibold text-xs rounded-full border border-indigo-500/20 shadow-inner">
-          <Cpu className="w-3.5 h-3.5 animate-pulse" /> Open For Full-Time Roles &amp; Contracts
+          <Cpu className="w-3.5 h-3.5 animate-pulse" /> Available for Full-Time &amp; Consultant Roles
         </div>
 
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-[1.1]">
@@ -299,6 +373,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 4. DYNAMIC SKILLS MATRIX */}
       <section id="skills" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-12">
           <div>
@@ -309,7 +384,7 @@ export default function Home() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {skills.map((skill) => (
+          {activeSkills.map((skill) => (
             <div key={skill.id} className="glass p-6 rounded-2xl border border-slate-900 space-y-3">
               <div className="flex justify-between items-center text-xs font-extrabold text-white">
                 <span>{skill.name}</span>
@@ -323,6 +398,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 5. CAREER EXPERIENCE CHRONOLOGY */}
       <section id="experiences" className="py-20 px-6 max-w-5xl mx-auto border-t border-slate-900">
         <div className="text-center space-y-3 mb-16">
           <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">Engineering Chronology</span>
@@ -330,7 +406,7 @@ export default function Home() {
         </div>
 
         <div className="space-y-6 relative border-l border-slate-900 pl-6 md:pl-8 ml-4">
-          {experiences.map((exp) => (
+          {activeExperiences.map((exp) => (
             <div key={exp.id} className="glass p-6 md:p-8 rounded-3xl border border-slate-900 relative">
               <div className="absolute -left-[35px] md:-left-[43px] top-6 p-1.5 bg-slate-950 border-2 border-indigo-500 rounded-full">
                 <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
@@ -339,7 +415,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-900 pb-4 mb-4">
                 <div>
                   <h3 className="font-extrabold text-base text-white">{exp.role}</h3>
-                  <div className="text-xs text-slate-400 font-medium">{exp.company} — <span className="text-indigo-400">{exp.employmentType}</span></div>
+                  <div className="text-xs text-slate-400 font-medium">{exp.company} — <span className="text-indigo-400">{exp.employmentType || 'Full-Time'}</span></div>
                 </div>
                 <span className="px-3 py-1 bg-slate-900 text-slate-500 rounded-full font-mono text-[10px] border border-slate-850 h-fit w-fit">
                   {new Date(exp.startDate).getFullYear()} — {exp.currentlyWorking ? 'PRESENT' : 'COMPLETED'}
@@ -356,6 +432,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 6. FEATURED CASE STUDIES (PROJECTS) */}
       <section id="projects" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-16">
           <div>
@@ -366,7 +443,7 @@ export default function Home() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {projects.map((proj) => (
+          {activeProjects.map((proj) => (
             <div key={proj.id} className="glass rounded-3xl border border-slate-900 overflow-hidden flex flex-col justify-between group">
               <div className="relative h-56 overflow-hidden border-b border-slate-900">
                 <img 
@@ -415,6 +492,42 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 7. NEW: TECHNICAL BLOGS & ARTICLES FEED SECTION (WORD-FOR-WORD REQUIREMENT MAPPED) */}
+      <section id="blogs" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-16">
+          <div>
+            <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Technical Publication</span>
+            <h2 className="text-3xl font-extrabold text-white mt-1">Articles &amp; Blog Feed</h2>
+          </div>
+          <p className="text-slate-500 text-xs max-w-xs leading-relaxed">Dynamic deep-dives managed completely via our Custom Writer Lab.</p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {activeBlogs.map((blog) => (
+            <div key={blog.id} className="glass p-6 md:p-8 rounded-3xl border border-slate-900 flex flex-col justify-between gap-6 hover:border-slate-800 transition-all">
+              <div className="space-y-3">
+                <div className="flex items-center gap-4 text-[10px] font-mono text-indigo-400 font-bold uppercase tracking-wider">
+                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {blog.readingTime} Mins Read</span>
+                  <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {blog.views} Views</span>
+                </div>
+                <h3 className="font-extrabold text-lg text-white leading-snug hover:text-indigo-300 transition-colors">
+                  {blog.title}
+                </h3>
+                <span className="block text-[10px] text-slate-500 font-mono">Published: {new Date(blog.createdAt).toLocaleDateString()}</span>
+              </div>
+
+              <a 
+                href={`/admin/blogs`}
+                className="w-fit text-xs font-bold text-slate-300 hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+              >
+                Read Deep-Dive <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 8. SERVICES & PACKAGES */}
       <section id="services" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="text-center space-y-3 mb-16">
           <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Services &amp; consulting</span>
@@ -422,7 +535,7 @@ export default function Home() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {services.map((service) => (
+          {activeServices.map((service) => (
             <div key={service.id} className="glass p-8 rounded-3xl border border-slate-900 flex flex-col justify-between gap-6 relative">
               <div className="space-y-4">
                 <div className="flex justify-between items-start gap-4">
@@ -454,6 +567,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 9. SECURE CONTACT PORTAL */}
       <section id="contact" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="grid lg:grid-cols-12 gap-12 max-w-5xl mx-auto items-center">
           
@@ -544,6 +658,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 10. DYNAMIC FOOTER */}
       <footer className="bg-slate-950 border-t border-slate-900 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
