@@ -24,19 +24,21 @@ const PORT = process.env.PORT || 5000;
 // Parse cookies securely
 app.use(cookieParser(process.env.COOKIE_SIGNING_SECRET || 'cookie_secret_signing_key_256_bits'));
 
-// Enable Helmet to set security headers (CSP, HSTS, X-Frame-Options, etc.)
-app.use(helmet());
+// Enable Helmet to set security headers
+app.use(helmet({
+  crossOriginResourcePolicy: false, // Allows cross-origin asset sharing on Vercel
+}));
 
-// Configure CORS white-listing
+// Configure Dynamic CORS to allow your Vercel Frontend natively
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: true, // Automatically mirrors and whitelists the requesting origin (your Vercel domain!)
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
 app.use(cors(corsOptions));
 
-// HTTP Request logging with Morgan integrated into Winston logger
+// HTTP Request logging
 const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(
   morgan(morganFormat, {
@@ -44,14 +46,14 @@ app.use(
   })
 );
 
-// Payload size limits (prevent massive JSON overflows)
+// Payload size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Apply rate limits to all API calls
 app.use('/api/', apiLimiter);
 
-// Serve static assets if any
+// Serve static assets
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ==========================================
@@ -89,7 +91,6 @@ import contactRoutes from './routes/contactRoutes';
 import settingRoutes from './routes/settingRoutes';
 import mediaRoutes from './routes/mediaRoutes';
 import formRoutes from './routes/formRoutes';
-import swaggerRoutes from './routes/swaggerRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import newsletterRoutes from './routes/newsletterRoutes';
