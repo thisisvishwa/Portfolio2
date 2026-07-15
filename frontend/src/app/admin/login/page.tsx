@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { Shield, Key, Eye, EyeOff, Lock, User, Terminal, CheckCircle } from 'lucide-react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 export default function AdminLogin() {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +25,7 @@ export default function AdminLogin() {
     setErrorMessage('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/v1/auth/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emailOrUsername, password }),
@@ -54,7 +56,7 @@ export default function AdminLogin() {
     setErrorMessage('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/v1/auth/verify-mfa', {
+      const response = await fetch(`${API_BASE}/auth/verify-mfa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mfaToken, totpCode }),

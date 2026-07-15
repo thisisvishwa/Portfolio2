@@ -6,6 +6,8 @@ import {
   Trash2, RefreshCw, Heading, Code, Quote, List, Edit3, Globe, ToggleLeft
 } from 'lucide-react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 interface Blog {
   id: string;
   title: string;
@@ -37,7 +39,7 @@ export default function BlogEditorPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:5000/api/v1/blogs', {
+      const response = await fetch(`${API_BASE}/blogs`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -118,8 +120,8 @@ export default function BlogEditorPage() {
       };
 
       const url = selectedBlog 
-        ? `http://localhost:5000/api/v1/blogs/${selectedBlog.id}`
-        : 'http://localhost:5000/api/v1/blogs';
+        ? `${API_BASE}/blogs/${selectedBlog.id}`
+        : `${API_BASE}/blogs`;
       
       const method = selectedBlog ? 'PATCH' : 'POST';
 

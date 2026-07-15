@@ -7,6 +7,8 @@ import {
   FileText, Briefcase, Activity, Globe, Users, TrendingUp
 } from 'lucide-react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 interface StorageStats {
   totalBytesUsed: number;
   totalFiles: number;
@@ -69,12 +71,12 @@ export default function AdminDashboard() {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         const [storageRes, contactRes, blogRes, projectRes, auditRes, analyticsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/v1/media/stats', { headers }),
-          fetch('http://localhost:5000/api/v1/contacts?limit=5', { headers }),
-          fetch('http://localhost:5000/api/v1/blogs?limit=5', { headers }),
-          fetch('http://localhost:5000/api/v1/projects?limit=5', { headers }),
-          fetch('http://localhost:5000/api/v1/settings/audit-logs?limit=5', { headers }),
-          fetch('http://localhost:5000/api/v1/analytics/dashboard', { headers })
+          fetch(`${API_BASE}/media/stats`, { headers }),
+          fetch(`${API_BASE}/contacts?limit=5`, { headers }),
+          fetch(`${API_BASE}/blogs?limit=5`, { headers }),
+          fetch(`${API_BASE}/projects?limit=5`, { headers }),
+          fetch(`${API_BASE}/settings/audit-logs?limit=5`, { headers }),
+          fetch(`${API_BASE}/analytics/dashboard`, { headers })
         ]);
 
         if (storageRes.ok) {

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import PageBuilder from '../../components/PageBuilder';
 import { Terminal, AlertTriangle, ArrowLeft } from 'lucide-react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 interface SectionBlock {
   section: 'hero' | 'skills' | 'experience' | 'contact' | 'custom';
   props: {
@@ -23,7 +25,7 @@ export default function CustomDynamicPage({ params }: { params: { slug: string[]
   useEffect(() => {
     const fetchPageLayout = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/v1/settings/pages/${slugPath}`);
+        const response = await fetch(`${API_BASE}/settings/pages/${slugPath}`);
         if (response.ok) {
           const data = await response.json();
           const parsedLayout = JSON.parse(data.data.page.layout);

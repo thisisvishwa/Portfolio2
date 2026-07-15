@@ -9,6 +9,8 @@ import {
   User, Award, FileText, Send
 } from 'lucide-react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 interface Project {
   id: string;
   title: string;
@@ -80,7 +82,7 @@ export default function Home() {
 
   const fetchProfileSettings = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/settings/public');
+      const response = await fetch(`${API_BASE}/settings/public`);
       if (response.ok) {
         const resData = await response.json();
         const settings = resData.data.settings;
@@ -95,13 +97,12 @@ export default function Home() {
 
   const fetchPortfolioData = async () => {
     try {
-      // parallel fetching from our backend
       const [projRes, blogRes, skillRes, expRes, serviceRes] = await Promise.all([
-        fetch('http://localhost:5000/api/v1/projects'),
-        fetch('http://localhost:5000/api/v1/blogs'),
-        fetch('http://localhost:5000/api/v1/skills'),
-        fetch('http://localhost:5000/api/v1/experiences'),
-        fetch('http://localhost:5000/api/v1/portfolio/services')
+        fetch(`${API_BASE}/projects`),
+        fetch(`${API_BASE}/blogs`),
+        fetch(`${API_BASE}/skills`),
+        fetch(`${API_BASE}/experiences`),
+        fetch(`${API_BASE}/portfolio/services`)
       ]);
 
       if (projRes.ok) {
@@ -125,7 +126,6 @@ export default function Home() {
         setServices(data.data.services || []);
       }
     } catch {
-      // Fallback placeholder seeds to maintain pristine visual on fresh run
       seedPlaceholderData();
     }
   };
@@ -194,12 +194,11 @@ export default function Home() {
 
   const handleLikeProject = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/projects/${id}/like`, { method: 'POST' });
+      const response = await fetch(`${API_BASE}/projects/${id}/like`, { method: 'POST' });
       if (response.ok) {
         setProjects(prev => prev.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p));
       }
     } catch {
-      // Fallback mock increment if API connection is offline
       setProjects(prev => prev.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p));
     }
   };
@@ -210,7 +209,7 @@ export default function Home() {
     setFormStatus(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/v1/contacts/submit', {
+      const response = await fetch(`${API_BASE}/contacts/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -225,7 +224,6 @@ export default function Home() {
         setFormStatus({ success: false, message: data.message || 'Validation checks failed.' });
       }
     } catch {
-      // Mock fallback if API is offline
       setFormStatus({ success: true, message: 'Message recorded! (Local Fallback active)' });
       setFormData({ name: '', email: '', subject: '', message: '' });
     } finally {
@@ -236,15 +234,12 @@ export default function Home() {
   return (
     <div className="relative min-h-screen font-sans bg-slate-950 text-slate-100 overflow-x-hidden">
       
-      {/* 1. INTERACTIVE BACKGROUND ANIMATION */}
       <InteractiveScene />
 
-      {/* AMBIENT SHIELDS */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 right-1/4 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* 2. PREMIUM DYNAMIC HEADER */}
-      <header className="sticky top-0 z-50 w-full glass border-b border-slate-900">
+      <header className="glass sticky top-0 z-50 w-full glass border-b border-slate-900">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-gradient-to-tr from-indigo-500 to-rose-500 rounded-lg shadow">
@@ -272,7 +267,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 3. HERO CANVAS */}
       <section className="relative pt-28 pb-20 px-6 max-w-7xl mx-auto text-center space-y-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 text-indigo-400 font-semibold text-xs rounded-full border border-indigo-500/20 shadow-inner">
           <Cpu className="w-3.5 h-3.5 animate-pulse" /> Open For Full-Time Roles &amp; Contracts
@@ -305,7 +299,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. DYNAMIC TECH GRID (SKILLS) */}
       <section id="skills" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-12">
           <div>
@@ -330,7 +323,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. CAREER TIMELINES */}
       <section id="experiences" className="py-20 px-6 max-w-5xl mx-auto border-t border-slate-900">
         <div className="text-center space-y-3 mb-16">
           <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">Engineering Chronology</span>
@@ -364,7 +356,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 6. PORTFOLIO CASES STUDIES (PROJECTS) */}
       <section id="projects" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-16">
           <div>
@@ -424,7 +415,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. FREELANCE SERVICES & PACKAGES */}
       <section id="services" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="text-center space-y-3 mb-16">
           <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Services &amp; consulting</span>
@@ -464,7 +454,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 8. SECURE CONTACT PORTAL */}
       <section id="contact" className="py-20 px-6 max-w-7xl mx-auto border-t border-slate-900">
         <div className="grid lg:grid-cols-12 gap-12 max-w-5xl mx-auto items-center">
           
@@ -555,7 +544,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 9. SECURED FOOTER */}
       <footer className="bg-slate-950 border-t border-slate-900 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
